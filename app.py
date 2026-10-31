@@ -13,37 +13,27 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-VAT_RATE = Decimal("0.20")
-TWELVE = Decimal("12")
-TWENTY_FOUR = Decimal("24")
+VAT = Decimal("1.20")
 PENNY = Decimal("0.01")
 
 
 # ============================================================
-# CALCULATION FUNCTIONS
+# CALCULATIONS
 # ============================================================
 
 def money(value):
-    """Round to two decimal places."""
     return value.quantize(PENNY, rounding=ROUND_HALF_UP)
 
 
-def format_gbp(value):
-    """Format a number as GBP."""
+def gbp(value):
     return f"£{money(value):,.2f}"
 
 
 def parse_amount(value):
-    """Safely parse a GBP amount entered as text."""
     if not value or not value.strip():
         return None
 
-    cleaned = (
-        value.strip()
-        .replace("£", "")
-        .replace(",", "")
-        .replace(" ", "")
-    )
+    cleaned = value.strip().replace("£", "").replace(",", "").replace(" ", "")
 
     try:
         amount = Decimal(cleaned)
@@ -54,41 +44,24 @@ def parse_amount(value):
         return money(amount)
 
     except (InvalidOperation, ValueError):
-        raise ValueError("Please enter a valid non-negative amount.")
+        raise ValueError("Enter a valid non-negative amount.")
 
 
-def calculate_offer(ex_vat):
-    """Calculate the offered amount including VAT."""
-    return money(ex_vat * (Decimal("1") + VAT_RATE))
-
-
-def calculate_customer(ex_vat, inc_vat):
-    """
-    Calculate the missing customer amount.
-
-    If both are provided, the including-VAT amount
-    takes priority for savings calculations.
-    """
-
-    if ex_vat is None and inc_vat is None:
+def calculate_customer(ex, inc):
+    if ex is None and inc is None:
         return None, None, None
 
-    if ex_vat is not None and inc_vat is not None:
-        return ex_vat, inc_vat, "both"
+    if ex is not None and inc is not None:
+        return ex, inc, "both"
 
-    if ex_vat is not None:
-        calculated_inc = calculate_offer(ex_vat)
-        return ex_vat, calculated_inc, "excl"
+    if ex is not None:
+        return ex, money(ex * VAT), "excl"
 
-    calculated_ex = money(
-        inc_vat / (Decimal("1") + VAT_RATE)
-    )
-
-    return calculated_ex, inc_vat, "incl"
+    return money(inc / VAT), inc, "incl"
 
 
 # ============================================================
-# CUSTOM STYLING
+# STYLING
 # ============================================================
 
 st.markdown("""
@@ -96,144 +69,178 @@ st.markdown("""
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
-html, body, [class*="css"] {
+.stApp {
+    background: #f4f6fa;
     font-family: 'DM Sans', sans-serif;
 }
 
-.stApp {
-    background: #f5f7fb;
-}
-
-header[data-testid="stHeader"] {
-    background: transparent;
-}
+/* Compact page */
 
 .block-container {
-    max-width: 1100px;
-    padding-top: 2rem;
-    padding-bottom: 3rem;
+    max-width: 1050px;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    padding-left: 2rem;
+    padding-right: 2rem;
 }
 
-/* Main heading */
-
-.main-header {
-    background: linear-gradient(120deg, #152b4a, #244e79);
-    padding: 30px 34px;
-    border-radius: 18px;
-    color: white;
-    margin-bottom: 25px;
+div[data-testid="stVerticalBlock"] {
+    gap: 0.55rem;
 }
 
-.main-header h1 {
-    color: white;
-    font-size: 30px;
-    font-weight: 800;
-    margin: 0 0 7px 0;
+/* FIX: INPUT TEXT VISIBILITY */
+
+div[data-testid="stTextInput"] input,
+div[data-testid="stNumberInput"] input,
+.stTextInput input {
+    color: #172b46 !important;
+    -webkit-text-fill-color: #172b46 !important;
+    background-color: #ffffff !important;
+    caret-color: #174b86 !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    height: 42px !important;
+    opacity: 1 !important;
 }
 
-.main-header p {
-    color: #d6e3f2;
-    font-size: 14px;
-    margin: 0;
-}
-
-/* Section headings */
-
-.section-title {
-    font-size: 19px;
-    font-weight: 800;
-    color: #172b46;
-    margin-top: 12px;
-    margin-bottom: 3px;
-}
-
-.section-description {
-    font-size: 13px;
-    color: #748197;
-    margin-bottom: 15px;
-}
-
-/* Input labels */
-
-div[data-testid="stTextInput"] label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #33445c;
-}
-
-div[data-testid="stTextInput"] input {
-    border-radius: 9px;
-    border: 1px solid #d8e0eb;
-    background: white;
-    min-height: 45px;
-    font-size: 16px;
-    font-weight: 600;
+div[data-testid="stTextInput"] input::placeholder {
+    color: #9aa5b5 !important;
+    -webkit-text-fill-color: #9aa5b5 !important;
+    opacity: 1 !important;
 }
 
 div[data-testid="stTextInput"] input:focus {
-    border-color: #3678c9;
-    box-shadow: 0 0 0 1px #3678c9;
+    border-color: #3678c9 !important;
+    box-shadow: 0 0 0 1px #3678c9 !important;
 }
 
-/* Calculated amount cards */
+div[data-testid="stTextInput"] label {
+    color: #33445c !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin-bottom: 2px !important;
+}
+
+/* Header */
+
+.main-header {
+    background: linear-gradient(115deg, #152b4a, #285582);
+    padding: 19px 25px;
+    border-radius: 13px;
+    color: white;
+    margin-bottom: 12px;
+}
+
+.main-header h1 {
+    color: white !important;
+    font-size: 25px;
+    font-weight: 800;
+    margin: 0;
+    padding: 0;
+}
+
+.main-header p {
+    color: #d7e5f4;
+    font-size: 12px;
+    margin: 3px 0 0 0;
+}
+
+/* Sections */
+
+.section-heading {
+    color: #172b46;
+    font-size: 17px;
+    font-weight: 800;
+    margin: 5px 0 0 0;
+}
+
+.section-sub {
+    color: #77869a;
+    font-size: 12px;
+    margin: 0 0 5px 0;
+}
+
+/* Calculated values */
 
 .calculated-card {
     background: #eaf2ff;
-    border: 1px solid #d6e5fa;
-    padding: 15px 18px;
-    border-radius: 11px;
-    margin-top: 8px;
-    margin-bottom: 15px;
+    border: 1px solid #d7e5f8;
+    border-radius: 9px;
+    padding: 9px 13px;
+    margin-top: 24px;
+    min-height: 65px;
 }
 
 .calculated-label {
-    color: #506985;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 5px;
+    color: #526984;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
 
 .calculated-value {
     color: #174b86;
-    font-size: 25px;
+    font-size: 21px;
+    font-weight: 800;
+    margin-top: 2px;
+}
+
+/* Customer calculated values */
+
+.customer-card {
+    background: white;
+    border: 1px solid #e0e7f0;
+    border-radius: 9px;
+    padding: 9px 13px;
+}
+
+.customer-label {
+    color: #77869a;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.customer-value {
+    color: #174b86;
+    font-size: 19px;
     font-weight: 800;
 }
 
-/* Results */
+/* Savings results */
 
 .results-heading {
-    font-size: 20px;
-    font-weight: 800;
     color: #172b46;
-    margin-top: 20px;
-    margin-bottom: 14px;
+    font-size: 18px;
+    font-weight: 800;
+    margin: 4px 0 8px 0;
 }
 
 .metric-card {
     background: white;
-    border: 1px solid #e3e9f1;
-    border-radius: 14px;
-    padding: 20px;
-    min-height: 125px;
-    box-shadow: 0 2px 8px rgba(20, 40, 70, 0.035);
+    border: 1px solid #e0e7f0;
+    border-radius: 11px;
+    padding: 13px 15px;
+    min-height: 92px;
+    box-shadow: 0 2px 5px rgba(20,40,70,0.025);
 }
 
 .metric-label {
-    color: #78869a;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 10px;
+    color: #77869a;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .metric-value {
-    color: #16865b;
-    font-size: 27px;
+    color: #13865a;
+    font-size: 24px;
     font-weight: 800;
-    letter-spacing: -0.5px;
+    margin-top: 4px;
 }
 
 .metric-value.negative {
-    color: #d05b49;
+    color: #d05245;
 }
 
 .metric-value.neutral {
@@ -241,33 +248,49 @@ div[data-testid="stTextInput"] input:focus {
 }
 
 .metric-note {
-    color: #8b97a8;
-    font-size: 11px;
-    margin-top: 7px;
+    color: #98a3b1;
+    font-size: 10px;
 }
 
-/* Information */
+/* Status */
 
-.info-note {
-    background: #eef3f9;
-    border-radius: 10px;
-    padding: 13px 16px;
-    color: #52657d;
+.status {
+    padding: 9px 13px;
+    border-radius: 8px;
     font-size: 12px;
-    margin-top: 15px;
+    font-weight: 600;
+    margin: 5px 0 9px 0;
+    background: #e9f6ef;
+    color: #16754e;
 }
 
-/* Footer */
+.status.negative {
+    background: #fff0ed;
+    color: #bc493d;
+}
+
+.status.neutral {
+    background: #edf1f6;
+    color: #52647b;
+}
+
+/* Dividers and footer */
+
+hr {
+    margin: 10px 0 !important;
+    border-color: #e1e7ef !important;
+}
 
 .footer {
-    text-align: center;
     color: #9aa5b5;
-    font-size: 11px;
-    margin-top: 35px;
+    text-align: center;
+    font-size: 10px;
+    margin-top: 14px;
 }
 
 div[data-testid="stAlert"] {
-    border-radius: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
 }
 
 </style>
@@ -281,324 +304,217 @@ div[data-testid="stAlert"] {
 st.markdown("""
 <div class="main-header">
     <h1>💷 Monthly Savings Calculator</h1>
-    <p>Calculate customer savings instantly. Enter the offered price
-    and the customer's current monthly payment.</p>
+    <p>Instantly calculate customer savings · VAT at 20% · GBP (£)</p>
 </div>
 """, unsafe_allow_html=True)
 
 
 # ============================================================
-# SECTION 1 — AGENT OFFER
+# 01 — AGENT OFFER
 # ============================================================
 
 st.markdown(
-    '<div class="section-title">01 &nbsp; Your offer</div>',
+    '<div class="section-heading">01 &nbsp; Agent Offer</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="section-description">'
-    'Enter the monthly amount offered by the agent. '
-    'VAT is automatically added at 20%.'
-    '</div>',
+    '<div class="section-sub">Enter the offered monthly price excluding VAT.</div>',
     unsafe_allow_html=True
 )
 
-offer_col, offer_result_col = st.columns([1.15, 1])
+offer_col, offer_result_col = st.columns([1, 1])
 
 with offer_col:
-
     offer_input = st.text_input(
         "Offered monthly amount (Excl. VAT)",
         placeholder="e.g. 50.00",
-        key="offer_ex",
-        help="Enter the agent's offered monthly price excluding VAT."
+        key="offer_ex"
     )
 
+try:
+    offer_ex = parse_amount(offer_input)
+    offer_error = None
+except ValueError as e:
+    offer_ex = None
+    offer_error = str(e)
+
+if offer_error:
+    st.error(offer_error)
+    offer_inc = None
+else:
+    offer_inc = money(offer_ex * VAT) if offer_ex is not None else None
+
 with offer_result_col:
+    value = gbp(offer_inc) if offer_inc is not None else "—"
 
-    try:
-        offer_ex = parse_amount(offer_input)
-        offer_error = None
-    except ValueError as e:
-        offer_ex = None
-        offer_error = str(e)
-
-    if offer_error:
-        st.error(offer_error)
-
-    elif offer_ex is not None:
-
-        offer_inc = calculate_offer(offer_ex)
-
-        st.markdown(f"""
-        <div class="calculated-card">
-            <div class="calculated-label">
-                OFFERED MONTHLY AMOUNT INCLUDING 20% VAT
-            </div>
-            <div class="calculated-value">
-                {format_gbp(offer_inc)}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    else:
-        st.markdown("""
-        <div class="calculated-card">
-            <div class="calculated-label">
-                OFFERED MONTHLY AMOUNT INCLUDING 20% VAT
-            </div>
-            <div class="calculated-value">£0.00</div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="calculated-card">
+        <div class="calculated-label">OFFERED MONTHLY AMOUNT INCLUDING 20% VAT</div>
+        <div class="calculated-value">{value}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ============================================================
-# SECTION 2 — CUSTOMER CURRENT PRICE
+# 02 — CUSTOMER CURRENT PRICE
 # ============================================================
 
 st.divider()
 
 st.markdown(
-    '<div class="section-title">02 &nbsp; Customer current price</div>',
+    '<div class="section-heading">02 &nbsp; Customer Current Price</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="section-description">'
-    'Enter whichever amount is available. You can enter both '
-    'if the customer has provided both figures.'
-    '</div>',
+    '<div class="section-sub">Enter either or both amounts. The missing amount will be calculated automatically.</div>',
     unsafe_allow_html=True
 )
 
-customer_col1, customer_col2 = st.columns(2)
+cust_col1, cust_col2 = st.columns(2)
 
-with customer_col1:
-
+with cust_col1:
     customer_ex_input = st.text_input(
         "Current monthly amount (Excl. VAT)",
         placeholder="e.g. 65.00",
-        key="customer_ex",
-        help="Optional. Enter the customer's current price excluding VAT."
+        key="customer_ex"
     )
 
-with customer_col2:
-
+with cust_col2:
     customer_inc_input = st.text_input(
         "Current monthly amount (Incl. VAT)",
         placeholder="e.g. 78.00",
-        key="customer_inc",
-        help="Optional. Enter the actual amount the customer pays including VAT."
+        key="customer_inc"
     )
-
-
-# ============================================================
-# CUSTOMER PRICE CALCULATION
-# ============================================================
 
 try:
     customer_ex_input_value = parse_amount(customer_ex_input)
     customer_inc_input_value = parse_amount(customer_inc_input)
-
     customer_error = None
-
 except ValueError as e:
     customer_ex_input_value = None
     customer_inc_input_value = None
     customer_error = str(e)
 
 if customer_error:
-
     st.error(customer_error)
-
     customer_ex = None
     customer_inc = None
     customer_source = None
-
 else:
-
     customer_ex, customer_inc, customer_source = calculate_customer(
         customer_ex_input_value,
         customer_inc_input_value
     )
 
 
-# Display calculated customer values
+# Display customer calculated figures
 
 if customer_source is not None:
 
-    st.markdown("**Calculated customer amounts**")
+    display_col1, display_col2 = st.columns(2)
 
-    result_col1, result_col2 = st.columns(2)
-
-    with result_col1:
-
+    with display_col1:
         st.markdown(f"""
-        <div class="calculated-card">
-            <div class="calculated-label">
-                MONTHLY AMOUNT EXCLUDING VAT
-            </div>
-            <div class="calculated-value">
-                {format_gbp(customer_ex)}
-            </div>
+        <div class="customer-card">
+            <div class="customer-label">CURRENT AMOUNT EXCLUDING VAT</div>
+            <div class="customer-value">{gbp(customer_ex)}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with result_col2:
-
+    with display_col2:
         st.markdown(f"""
-        <div class="calculated-card">
-            <div class="calculated-label">
-                MONTHLY AMOUNT INCLUDING VAT
-            </div>
-            <div class="calculated-value">
-                {format_gbp(customer_inc)}
-            </div>
+        <div class="customer-card">
+            <div class="customer-label">CURRENT AMOUNT INCLUDING VAT</div>
+            <div class="customer-value">{gbp(customer_inc)}</div>
         </div>
         """, unsafe_allow_html=True)
 
     if customer_source == "both":
-
-        st.caption(
-            "Both amounts were provided. The including-VAT figure "
-            "is used as the customer's actual payment for savings."
-        )
-
-    elif customer_source == "excl":
-
-        st.caption(
-            "Including-VAT amount automatically calculated at 20%."
-        )
-
-    elif customer_source == "incl":
-
-        st.caption(
-            "Excluding-VAT amount automatically calculated at 20%."
-        )
+        st.caption("Both figures entered. Including-VAT amount used for savings.")
+    else:
+        st.caption("Missing amount automatically calculated using 20% VAT.")
 
 
 # ============================================================
-# SECTION 3 — SAVINGS CALCULATION
+# 03 — SAVINGS RESULTS
 # ============================================================
 
 st.divider()
 
 st.markdown(
-    '<div class="results-heading">03 &nbsp; Customer savings</div>',
+    '<div class="results-heading">03 &nbsp; Customer Savings</div>',
     unsafe_allow_html=True
 )
 
-if customer_error or offer_error:
+if offer_error or customer_error:
 
-    st.warning(
-        "Please correct the invalid amount before calculating savings."
-    )
+    st.warning("Please correct the invalid amount.")
 
 elif offer_ex is None:
 
-    st.info(
-        "Enter the agent's offered monthly amount to get started."
-    )
+    st.info("Enter the agent's offered amount to get started.")
 
 elif customer_source is None:
 
-    st.info(
-        "Enter the customer's current amount (including VAT, "
-        "excluding VAT, or both) to calculate savings."
-    )
+    st.info("Enter the customer's current monthly amount to calculate savings.")
 
 else:
 
-    # Monthly difference: positive = saving, negative = additional cost
+    monthly = money(customer_inc - offer_inc)
+    yearly = money(monthly * Decimal("12"))
+    two_year = money(monthly * Decimal("24"))
 
-    monthly_difference = money(customer_inc - offer_inc)
-
-    yearly_difference = money(monthly_difference * TWELVE)
-
-    two_year_difference = money(monthly_difference * TWENTY_FOUR)
-
-    # Determine result labels and colours
-
-    if monthly_difference > 0:
-
-        status = "Customer saves"
-
-        monthly_label = "Monthly savings"
-        yearly_label = "1-year savings"
-        two_year_label = "2-year savings"
-
+    if monthly > 0:
+        status = "✓ Customer saves money with this offer"
+        status_class = ""
+        labels = [
+            "MONTHLY SAVINGS",
+            "1-YEAR SAVINGS",
+            "2-YEAR SAVINGS"
+        ]
         value_class = "metric-value"
 
-    elif monthly_difference < 0:
-
-        status = "Offer costs more"
-
-        monthly_label = "Additional monthly cost"
-        yearly_label = "Additional cost over 1 year"
-        two_year_label = "Additional cost over 2 years"
-
+    elif monthly < 0:
+        status = "⚠ The new offer costs the customer more"
+        status_class = "negative"
+        labels = [
+            "ADDITIONAL MONTHLY COST",
+            "ADDITIONAL COST · 1 YEAR",
+            "ADDITIONAL COST · 2 YEARS"
+        ]
         value_class = "metric-value negative"
 
     else:
-
-        status = "No price difference"
-
-        monthly_label = "Monthly difference"
-        yearly_label = "1-year difference"
-        two_year_label = "2-year difference"
-
+        status = "The customer pays exactly the same"
+        status_class = "neutral"
+        labels = [
+            "MONTHLY DIFFERENCE",
+            "1-YEAR DIFFERENCE",
+            "2-YEAR DIFFERENCE"
+        ]
         value_class = "metric-value neutral"
 
-    st.markdown(
-        f'<div class="info-note">'
-        f'<b>{status}</b> &nbsp;|&nbsp; '
-        f'Current monthly payment: {format_gbp(customer_inc)} '
-        f'&nbsp;|&nbsp; '
-        f'New monthly payment: {format_gbp(offer_inc)}'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown(f"""
+    <div class="status {status_class}">{status}</div>
+    """, unsafe_allow_html=True)
 
-    # Display three savings cards
+    cols = st.columns(3)
 
-    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    values = [monthly, yearly, two_year]
+    periods = ["Per month", "12 months", "24 months"]
 
-    with metric_col1:
+    for col, label, value, period in zip(cols, labels, values, periods):
 
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">{monthly_label}</div>
-            <div class="{value_class}">
-                {format_gbp(abs(monthly_difference))}
+        with col:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">{label}</div>
+                <div class="{value_class}">{gbp(abs(value))}</div>
+                <div class="metric-note">{period}</div>
             </div>
-            <div class="metric-note">Per month</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with metric_col2:
-
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">{yearly_label}</div>
-            <div class="{value_class}">
-                {format_gbp(abs(yearly_difference))}
-            </div>
-            <div class="metric-note">12 months</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with metric_col3:
-
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">{two_year_label}</div>
-            <div class="{value_class}">
-                {format_gbp(abs(two_year_difference))}
-            </div>
-            <div class="metric-note">24 months</div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
 
 # ============================================================
@@ -607,8 +523,6 @@ else:
 
 st.markdown("""
 <div class="footer">
-    Monthly Savings Calculator &nbsp;•&nbsp;
-    VAT calculated at a flat rate of 20% &nbsp;•&nbsp;
-    All amounts in GBP (£)
+    Monthly Savings Calculator &nbsp;·&nbsp; Flat VAT rate: 20% &nbsp;·&nbsp; All amounts in GBP
 </div>
 """, unsafe_allow_html=True)
