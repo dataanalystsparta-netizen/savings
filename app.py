@@ -18,7 +18,7 @@ PENNY = Decimal("0.01")
 
 
 # ============================================================
-# CALCULATIONS
+# CALCULATION FUNCTIONS
 # ============================================================
 
 def money(value):
@@ -33,7 +33,12 @@ def parse_amount(value):
     if not value or not value.strip():
         return None
 
-    cleaned = value.strip().replace("£", "").replace(",", "").replace(" ", "")
+    cleaned = (
+        value.strip()
+        .replace("£", "")
+        .replace(",", "")
+        .replace(" ", "")
+    )
 
     try:
         amount = Decimal(cleaned)
@@ -48,6 +53,7 @@ def parse_amount(value):
 
 
 def calculate_customer(ex, inc):
+
     if ex is None and inc is None:
         return None, None, None
 
@@ -61,7 +67,7 @@ def calculate_customer(ex, inc):
 
 
 # ============================================================
-# STYLING
+# CUSTOM CSS
 # ============================================================
 
 st.markdown("""
@@ -73,8 +79,6 @@ st.markdown("""
     background: #f4f6fa;
     font-family: 'DM Sans', sans-serif;
 }
-
-/* Compact page */
 
 .block-container {
     max-width: 1050px;
@@ -88,11 +92,9 @@ div[data-testid="stVerticalBlock"] {
     gap: 0.55rem;
 }
 
-/* FIX: INPUT TEXT VISIBILITY */
+/* INPUT VISIBILITY */
 
-div[data-testid="stTextInput"] input,
-div[data-testid="stNumberInput"] input,
-.stTextInput input {
+div[data-testid="stTextInput"] input {
     color: #172b46 !important;
     -webkit-text-fill-color: #172b46 !important;
     background-color: #ffffff !important;
@@ -123,7 +125,7 @@ div[data-testid="stTextInput"] label {
     margin-bottom: 2px !important;
 }
 
-/* Header */
+/* HEADER */
 
 .main-header {
     background: linear-gradient(115deg, #152b4a, #285582);
@@ -147,7 +149,32 @@ div[data-testid="stTextInput"] label {
     margin: 3px 0 0 0;
 }
 
-/* Sections */
+/* MODE SELECTOR */
+
+div[role="radiogroup"] {
+    gap: 12px;
+}
+
+div[role="radiogroup"] label {
+    background: white;
+    border: 1px solid #dce4ef;
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-weight: 700;
+    color: #263e5a !important;
+}
+
+div[role="radiogroup"] label p {
+    color: #263e5a !important;
+    font-size: 13px;
+}
+
+div[role="radiogroup"] label:has(input:checked) {
+    background: #e7f0ff;
+    border-color: #397dc0;
+}
+
+/* SECTION HEADINGS */
 
 .section-heading {
     color: #172b46;
@@ -162,7 +189,7 @@ div[data-testid="stTextInput"] label {
     margin: 0 0 5px 0;
 }
 
-/* Calculated values */
+/* CALCULATED OFFER */
 
 .calculated-card {
     background: #eaf2ff;
@@ -187,7 +214,7 @@ div[data-testid="stTextInput"] label {
     margin-top: 2px;
 }
 
-/* Customer calculated values */
+/* CUSTOMER AMOUNTS */
 
 .customer-card {
     background: white;
@@ -208,7 +235,7 @@ div[data-testid="stTextInput"] label {
     font-weight: 800;
 }
 
-/* Savings results */
+/* SAVINGS CARDS */
 
 .results-heading {
     color: #172b46;
@@ -252,7 +279,7 @@ div[data-testid="stTextInput"] label {
     font-size: 10px;
 }
 
-/* Status */
+/* STATUS */
 
 .status {
     padding: 9px 13px;
@@ -273,8 +300,6 @@ div[data-testid="stTextInput"] label {
     background: #edf1f6;
     color: #52647b;
 }
-
-/* Dividers and footer */
 
 hr {
     margin: 10px 0 !important;
@@ -310,6 +335,40 @@ st.markdown("""
 
 
 # ============================================================
+# CALCULATION PERIOD SELECTOR
+# ============================================================
+
+st.markdown(
+    '<div class="section-heading">Calculation Period</div>',
+    unsafe_allow_html=True
+)
+
+mode = st.radio(
+    "Select calculation period",
+    ["Monthly", "Quarterly (3 months)"],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="calculation_mode"
+)
+
+is_quarterly = mode == "Quarterly (3 months)"
+
+# Separate input keys ensure monthly figures are never
+# accidentally interpreted as quarterly figures, or vice versa.
+
+period_key = "quarterly" if is_quarterly else "monthly"
+
+period_name = "Quarterly" if is_quarterly else "Monthly"
+period_description = (
+    "All entered amounts represent a 3-month period."
+    if is_quarterly
+    else "All entered amounts represent a 1-month period."
+)
+
+st.caption(period_description)
+
+
+# ============================================================
 # 01 — AGENT OFFER
 # ============================================================
 
@@ -319,22 +378,26 @@ st.markdown(
 )
 
 st.markdown(
-    '<div class="section-sub">Enter the offered monthly price excluding VAT.</div>',
+    f'<div class="section-sub">'
+    f'Enter the offered {period_name.lower()} price excluding VAT.'
+    f'</div>',
     unsafe_allow_html=True
 )
 
 offer_col, offer_result_col = st.columns([1, 1])
 
 with offer_col:
+
     offer_input = st.text_input(
-        "Offered monthly amount (Excl. VAT)",
+        f"Offered {period_name.lower()} amount (Excl. VAT)",
         placeholder="e.g. 50.00",
-        key="offer_ex"
+        key=f"offer_ex_{period_key}"
     )
 
 try:
     offer_ex = parse_amount(offer_input)
     offer_error = None
+
 except ValueError as e:
     offer_ex = None
     offer_error = str(e)
@@ -342,15 +405,23 @@ except ValueError as e:
 if offer_error:
     st.error(offer_error)
     offer_inc = None
+
 else:
-    offer_inc = money(offer_ex * VAT) if offer_ex is not None else None
+    offer_inc = (
+        money(offer_ex * VAT)
+        if offer_ex is not None
+        else None
+    )
 
 with offer_result_col:
+
     value = gbp(offer_inc) if offer_inc is not None else "—"
 
     st.markdown(f"""
     <div class="calculated-card">
-        <div class="calculated-label">OFFERED MONTHLY AMOUNT INCLUDING 20% VAT</div>
+        <div class="calculated-label">
+            OFFERED {period_name.upper()} AMOUNT INCLUDING 20% VAT
+        </div>
         <div class="calculated-value">{value}</div>
     </div>
     """, unsafe_allow_html=True)
@@ -368,77 +439,111 @@ st.markdown(
 )
 
 st.markdown(
-    '<div class="section-sub">Enter either or both amounts. The missing amount will be calculated automatically.</div>',
+    f'<div class="section-sub">'
+    f'Enter either or both {period_name.lower()} amounts. '
+    f'The missing amount will be calculated automatically.'
+    f'</div>',
     unsafe_allow_html=True
 )
 
 cust_col1, cust_col2 = st.columns(2)
 
 with cust_col1:
+
     customer_ex_input = st.text_input(
-        "Current monthly amount (Excl. VAT)",
+        f"Current {period_name.lower()} amount (Excl. VAT)",
         placeholder="e.g. 65.00",
-        key="customer_ex"
+        key=f"customer_ex_{period_key}"
     )
 
 with cust_col2:
+
     customer_inc_input = st.text_input(
-        "Current monthly amount (Incl. VAT)",
+        f"Current {period_name.lower()} amount (Incl. VAT)",
         placeholder="e.g. 78.00",
-        key="customer_inc"
+        key=f"customer_inc_{period_key}"
     )
 
+
+# ============================================================
+# CUSTOMER PRICE CALCULATION
+# ============================================================
+
 try:
+
     customer_ex_input_value = parse_amount(customer_ex_input)
     customer_inc_input_value = parse_amount(customer_inc_input)
+
     customer_error = None
+
 except ValueError as e:
+
     customer_ex_input_value = None
     customer_inc_input_value = None
     customer_error = str(e)
 
+
 if customer_error:
+
     st.error(customer_error)
+
     customer_ex = None
     customer_inc = None
     customer_source = None
+
 else:
+
     customer_ex, customer_inc, customer_source = calculate_customer(
         customer_ex_input_value,
         customer_inc_input_value
     )
 
 
-# Display customer calculated figures
+# ============================================================
+# DISPLAY CUSTOMER AMOUNTS
+# ============================================================
 
 if customer_source is not None:
 
     display_col1, display_col2 = st.columns(2)
 
     with display_col1:
+
         st.markdown(f"""
         <div class="customer-card">
-            <div class="customer-label">CURRENT AMOUNT EXCLUDING VAT</div>
+            <div class="customer-label">
+                CURRENT {period_name.upper()} AMOUNT EXCLUDING VAT
+            </div>
             <div class="customer-value">{gbp(customer_ex)}</div>
         </div>
         """, unsafe_allow_html=True)
 
     with display_col2:
+
         st.markdown(f"""
         <div class="customer-card">
-            <div class="customer-label">CURRENT AMOUNT INCLUDING VAT</div>
+            <div class="customer-label">
+                CURRENT {period_name.upper()} AMOUNT INCLUDING VAT
+            </div>
             <div class="customer-value">{gbp(customer_inc)}</div>
         </div>
         """, unsafe_allow_html=True)
 
     if customer_source == "both":
-        st.caption("Both figures entered. Including-VAT amount used for savings.")
+
+        st.caption(
+            "Both figures entered. Including-VAT amount used for savings."
+        )
+
     else:
-        st.caption("Missing amount automatically calculated using 20% VAT.")
+
+        st.caption(
+            "Missing amount automatically calculated using 20% VAT."
+        )
 
 
 # ============================================================
-# 03 — SAVINGS RESULTS
+# 03 — CUSTOMER SAVINGS
 # ============================================================
 
 st.divider()
@@ -447,6 +552,7 @@ st.markdown(
     '<div class="results-heading">03 &nbsp; Customer Savings</div>',
     unsafe_allow_html=True
 )
+
 
 if offer_error or customer_error:
 
@@ -458,60 +564,136 @@ elif offer_ex is None:
 
 elif customer_source is None:
 
-    st.info("Enter the customer's current monthly amount to calculate savings.")
+    st.info(
+        "Enter the customer's current amount to calculate savings."
+    )
 
 else:
 
-    monthly = money(customer_inc - offer_inc)
-    yearly = money(monthly * Decimal("12"))
-    two_year = money(monthly * Decimal("24"))
+    # Difference for the selected input period.
+    # Positive = saving, negative = additional cost.
 
-    if monthly > 0:
+    period_difference = money(customer_inc - offer_inc)
+
+    if is_quarterly:
+
+        # Quarterly input: convert to all four time horizons.
+
+        monthly_difference = money(
+            period_difference / Decimal("3")
+        )
+
+        quarter_difference = period_difference
+
+        yearly_difference = money(
+            period_difference * Decimal("4")
+        )
+
+        two_year_difference = money(
+            period_difference * Decimal("8")
+        )
+
+    else:
+
+        # Monthly input: calculate all four time horizons.
+
+        monthly_difference = period_difference
+
+        quarter_difference = money(
+            period_difference * Decimal("3")
+        )
+
+        yearly_difference = money(
+            period_difference * Decimal("12")
+        )
+
+        two_year_difference = money(
+            period_difference * Decimal("24")
+        )
+
+
+    # Determine status
+
+    if period_difference > 0:
+
         status = "✓ Customer saves money with this offer"
         status_class = ""
+
         labels = [
-            "MONTHLY SAVINGS",
-            "1-YEAR SAVINGS",
-            "2-YEAR SAVINGS"
+            "1 MONTH",
+            "1 QUARTER (3 MONTHS)",
+            "1 YEAR (12 MONTHS)",
+            "2 YEARS (24 MONTHS)"
         ]
+
         value_class = "metric-value"
 
-    elif monthly < 0:
+    elif period_difference < 0:
+
         status = "⚠ The new offer costs the customer more"
         status_class = "negative"
+
         labels = [
-            "ADDITIONAL MONTHLY COST",
-            "ADDITIONAL COST · 1 YEAR",
-            "ADDITIONAL COST · 2 YEARS"
+            "1 MONTH ADDITIONAL COST",
+            "1 QUARTER ADDITIONAL COST",
+            "1 YEAR ADDITIONAL COST",
+            "2 YEARS ADDITIONAL COST"
         ]
+
         value_class = "metric-value negative"
 
     else:
+
         status = "The customer pays exactly the same"
         status_class = "neutral"
+
         labels = [
-            "MONTHLY DIFFERENCE",
-            "1-YEAR DIFFERENCE",
-            "2-YEAR DIFFERENCE"
+            "1 MONTH",
+            "1 QUARTER (3 MONTHS)",
+            "1 YEAR (12 MONTHS)",
+            "2 YEARS (24 MONTHS)"
         ]
+
         value_class = "metric-value neutral"
 
+
     st.markdown(f"""
-    <div class="status {status_class}">{status}</div>
+    <div class="status {status_class}">
+        {status}
+    </div>
     """, unsafe_allow_html=True)
 
-    cols = st.columns(3)
 
-    values = [monthly, yearly, two_year]
-    periods = ["Per month", "12 months", "24 months"]
+    # Four savings cards
 
-    for col, label, value, period in zip(cols, labels, values, periods):
+    metric_cols = st.columns(4)
+
+    values = [
+        monthly_difference,
+        quarter_difference,
+        yearly_difference,
+        two_year_difference
+    ]
+
+    periods = [
+        "Monthly",
+        "3 months",
+        "12 months",
+        "24 months"
+    ]
+
+    for col, label, value, period in zip(
+        metric_cols, labels, values, periods
+    ):
 
         with col:
+
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">{label}</div>
-                <div class="{value_class}">{gbp(abs(value))}</div>
+                <div class="{value_class}">
+                    {gbp(abs(value))}
+                </div>
                 <div class="metric-note">{period}</div>
             </div>
             """, unsafe_allow_html=True)
@@ -521,8 +703,10 @@ else:
 # FOOTER
 # ============================================================
 
-st.markdown("""
+st.markdown(f"""
 <div class="footer">
-    Monthly Savings Calculator &nbsp;·&nbsp; Flat VAT rate: 20% &nbsp;·&nbsp; All amounts in GBP
+    Savings Calculator &nbsp;·&nbsp;
+    {period_name} Mode &nbsp;·&nbsp;
+    Flat VAT: 20% &nbsp;·&nbsp; GBP (£)
 </div>
 """, unsafe_allow_html=True)
