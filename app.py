@@ -54,14 +54,14 @@ def parse_amount(value):
         raise ValueError("Enter a valid non-negative amount.")
 
 
-def calculate_amounts(ex, inc):
+def calculate_offer(ex, inc):
     """
-    Calculate missing VAT amount.
+    Calculate offered amounts.
 
-    If both are provided:
-    - Keep both actual entered values.
+    If both are entered:
+    - Keep both actual values.
     - Use including-VAT amount for savings.
-    - Flag any discrepancy against 20% VAT.
+    - Flag discrepancies against 20% VAT.
     """
 
     if ex is None and inc is None:
@@ -84,16 +84,6 @@ def calculate_amounts(ex, inc):
     calculated_ex = money(inc / VAT)
 
     return calculated_ex, inc, "incl", False
-
-
-def savings_class(value):
-    if value > 0:
-        return "metric-value"
-
-    elif value < 0:
-        return "metric-value negative"
-
-    return "metric-value neutral"
 
 
 # ============================================================
@@ -460,7 +450,7 @@ if offer_error:
 else:
 
     offer_ex, offer_inc, offer_source, offer_discrepancy = (
-        calculate_amounts(
+        calculate_offer(
             offer_ex_input_value,
             offer_inc_input_value
         )
@@ -524,7 +514,8 @@ st.markdown(
 
 st.markdown(
     f'<div class="section-sub">'
-    f'Enter either or both current {period_name.lower()} amounts.'
+    f'Enter the customer\'s actual {period_name.lower()} payment '
+    f'including VAT.'
     f'</div>',
     unsafe_allow_html=True
 )
@@ -533,38 +524,26 @@ customer_col1, customer_col2 = st.columns(2)
 
 with customer_col1:
 
-    customer_ex_input = st.text_input(
-        f"Current {period_name.lower()} amount (Excl. VAT)",
-        placeholder="e.g. 65.00",
-        key=f"customer_ex_{period_key}"
-    )
-
-with customer_col2:
-
     customer_inc_input = st.text_input(
         f"Current {period_name.lower()} amount (Incl. VAT)",
         placeholder="e.g. 78.00",
         key=f"customer_inc_{period_key}"
     )
 
-
-# ============================================================
-# CUSTOMER CALCULATION
-# ============================================================
-
 try:
 
-    customer_ex_input_value = parse_amount(customer_ex_input)
     customer_inc_input_value = parse_amount(customer_inc_input)
-
     customer_error = None
 
 except ValueError as e:
 
-    customer_ex_input_value = None
     customer_inc_input_value = None
     customer_error = str(e)
 
+
+# ============================================================
+# CUSTOMER PRICE CALCULATION
+# ============================================================
 
 if customer_error:
 
@@ -572,16 +551,15 @@ if customer_error:
 
     customer_ex = None
     customer_inc = None
-    customer_source = None
-    customer_discrepancy = False
 
 else:
 
-    customer_ex, customer_inc, customer_source, customer_discrepancy = (
-        calculate_amounts(
-            customer_ex_input_value,
-            customer_inc_input_value
-        )
+    customer_inc = customer_inc_input_value
+
+    customer_ex = (
+        money(customer_inc / VAT)
+        if customer_inc is not None
+        else None
     )
 
 
@@ -589,7 +567,7 @@ else:
 # DISPLAY CUSTOMER AMOUNTS
 # ============================================================
 
-if customer_source is not None:
+if customer_inc is not None:
 
     display_customer1, display_customer2 = st.columns(2)
 
@@ -607,26 +585,15 @@ if customer_source is not None:
     with display_customer2:
 
         st.markdown(f"""
-        <div class="customer-card">
-            <div class="customer-label">
+        <div class="calculated-card" style="margin-top:0;">
+            <div class="calculated-label">
                 CURRENT {period_name.upper()} AMOUNT INCLUDING VAT
             </div>
-            <div class="customer-value">{gbp(customer_inc)}</div>
+            <div class="calculated-value">{gbp(customer_inc)}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    if customer_source != "both":
-
-        st.caption(
-            "Missing amount automatically calculated using 20% VAT."
-        )
-
-    if customer_discrepancy:
-
-        st.warning(
-            "Customer amounts do not reconcile at 20% VAT. "
-            "The including-VAT amount will be used for savings calculations."
-        )
+    st.caption("Excluding-VAT amount automatically calculated for reference.")
 
 
 # ============================================================
@@ -649,15 +616,14 @@ elif offer_source is None:
 
     st.info("Enter at least one offered amount to get started.")
 
-elif customer_source is None:
+elif customer_inc is None:
 
     st.info(
-        "Enter at least one customer current amount to calculate savings."
+        "Enter the customer's current amount including VAT to calculate savings."
     )
 
 else:
 
-    # Difference for selected input period.
     # Positive = savings.
     # Negative = additional cost.
 
@@ -696,7 +662,7 @@ else:
         )
 
 
-    # Status and labels
+    # STATUS AND LABELS
 
     if period_difference > 0:
 
@@ -748,7 +714,7 @@ else:
     """, unsafe_allow_html=True)
 
 
-    # Four savings cards
+    # FOUR SAVINGS CARDS
 
     metric_cols = st.columns(4)
 
